@@ -5,9 +5,11 @@ from datetime import datetime
 from airflow import DAG
 from airflow.models import Variable
 from airflow.operators.python import PythonOperator
+from airflow.providers.slack.operators.slack import SlackAPIPostOperator
 
 client_id = Variable.get("CLIENT_ID")
 client_secret = Variable.get("CLIENT_SECRET")
+slack_token = Variable.get('SLACK_TOKEN')
 
 def generate_auth(ti):
     token_url = "https://accounts.spotify.com/api/token"
@@ -35,6 +37,26 @@ def get_albums(ti):
         return "{}"
     return r.json()
 
+def slack_notification(context):
+    slack_msg = """
+            :red_circle: Task Failed. 
+            *Task*: {task}  
+            *Dag*: {dag} 
+            *Execution Time*: {exec_date}  
+            """.format(
+            task=context.get('task_instance').task_id,
+            dag=context.get('task_instance').dag_id,
+            exec_date=context.get('execution_date'),
+            )
+    slack = SlackAPIPostOperator(
+        task_id="slack_notif",
+        dag=dag,
+        token=slack_token,
+        text=slack_msg,
+        channel="#spotify-pipeline"
+    )
+    return slack.execute(context=context)
+
 
 dag = DAG(
     "spotify_pipeline",
@@ -42,6 +64,7 @@ dag = DAG(
     schedule_interval="@daily",
     start_date=datetime(2022, 10, 4),
     catchup=False,
+    on_failure_callback=slack_notification
 )
 
 generate_auth = PythonOperator(
@@ -57,5 +80,6 @@ get_albums = PythonOperator(
     trigger_rule="all_success",
     dag=dag,
 )
+
 
 generate_auth >> get_albums

@@ -1,0 +1,17 @@
+Thoughts:
+
+Want to incorporate a data lake with raw data and a data warehouse with processed data
+
+Data Lake:
+- All data in a raw, unstructured form
+- Data can be for immediate or future use
+- Google cloud platform ?
+
+Data Warehouse:
+- Contains structured data that has been cleaned and processed
+- Some Postgres or MySQL DB ?
+
+Sensors:
+
+Slack Notifications:
+- On failure of any tasks

@@ -26,4 +26,26 @@ To add or remove dags while docker-compose is running, simply add or remove them
 
 When you're done, `docker-compose down` and close docker desktop.
 
-Enter virtual env using: `venv/Scripts/Activate.ps1`
+More documentation:
+
+Virtual environments:
+
+- Basic steps: https://www.freecodecamp.org/news/how-to-setup-virtual-environments-in-python/
+- Create virtual env using `virtualenv venv` (named environment venv)
+- Enter virtual env using: `venv/Scripts/Activate.ps1`
+
+Setting up Slack notifications:
+
+- Create a Slack app w default app configs (scopes, bots and stuff)
+
+  - Found it via: https://api.slack.com/tutorials/tracks/getting-a-token?app_id_from_manifest=A045JL75KU5
+
+- Under 'Features and Functionality', allow your app to have incoming web hooks and add a new webhook to your workspace
+
+  - Follow this link: https://www.reply.com/data-reply/en/content/integrating-slack-alerts-in-airflow
+
+- Go to your App's home and make sure it has a bot and a bot token
+
+  - Follow this link: https://api.slack.com/apps/A045JL75KU5/app-home
+
+- Use the bot token to make the API call or to use the Slack operator in your DAG
