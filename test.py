@@ -38,11 +38,14 @@ artists = ['15Dh5PvHQj909E0RgAe0aN', '6vWDO969PvNqNYHIOW5v0m', '0s4kXsjYeH0S1xRy
 # Data processing
 # Get audio features and audio analysis of those tracks
 # Get recommendations for similar tracks (based on genre and audio features)
+# Get music recommendations based on market, seeds (artists, genres, tracks), audio features (danceability, etc.)
 
 # Data warehouse
 # Save recommended tracks in a database
+# Can explain later how this can be scaled (loop through artists and tracks and also optimize a little by improving running time ie. when finding max and min values)
 
 
+recommended_songs = []
 top_tracks = []
 top_artists = []
 
@@ -53,9 +56,8 @@ energy_values = []
 instrumentalness_values = []
 valence_values = []
 
-# Going to bias towards higher valence and danceability ?
-# For recommendations, use avg tempo as min and max as max
 
+# Going to bias towards higher valence and danceability
 
 # Get album artists and tracks
 for album in albums:
@@ -72,6 +74,7 @@ for album in albums:
         track = track_uri.split(':')[2]
         if track not in top_tracks:
             top_tracks.append(track)
+
 
 # Get playlist artists and tracks
 for playlist in playlists:
@@ -134,11 +137,17 @@ max_valence = max(valence_values)
 
 
 # Get recommendations based on audio features
+limit = 10
+seed_artist = top_artists[1]
+seed_track = top_tracks[1]
+recommendation_endpoint = f"https://api.spotify.com/v1/recommendations?limit=10&market=ES&seed_artists={seed_artist}&seed_genres=pop%2Crap%2Cr-n-b&seed_tracks={seed_track}&min_danceability={min_danceability}&max_danceability={max_danceability}&min_energy={min_energy}&max_energy={max_energy}&min_instrumentalness={min_instrumentalness}&max_instrumentalness={max_instrumentalness}&min_loudness={min_loudness}&max_loudness={max_loudness}&min_tempo={min_tempo}&max_tempo={max_tempo}&min_valence={min_valence}&max_valence={max_valence}"
+r = requests.get(recommendation_endpoint, headers=headers)
+info = r.json()
+for track in info['tracks']:
+    song = track['name']
+    if song not in recommended_songs:
+        recommended_songs.append(song)
 
 
-
-
-
-# Now work on getting all the data I need (can save locally for now, for testing)
-# Get music recommendations based on market, seeds (artists, genres, tracks), audio features (danceability, etc.)
-
+# If the above works, clean up and throw into Airflow
+# Then figure out Mongo DB
