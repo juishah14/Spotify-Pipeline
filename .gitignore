@@ -1,3 +1,4 @@
 .env
 /logs
-notes.txt
+/notes.txt
+/test.py
