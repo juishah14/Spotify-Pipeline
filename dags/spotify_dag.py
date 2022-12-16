@@ -11,24 +11,19 @@ client_id = Variable.get("CLIENT_ID")
 client_secret = Variable.get("CLIENT_SECRET")
 slack_token = Variable.get('SLACK_TOKEN')
 
-albums = ['07w0rG5TETcyihsEIZR3qG', '6FKP2O0oOvZlDkF0gyTjiJ', '65YAjLCn7Jp33nJpOxIPMe', '73TNMu44lT0m1h1Nn6Bfiq', '1JsySWOa2RchsBB2N4313v', '6FJxoadUE4JNVwWHghBwnb', '0Zd10MKN5j9KwUST0TdBBB', '4SZko61aMnmgvNhfhgTuD3', '4EPQtdq6vvwxuYeQTrwDVY']
+albums = ['07w0rG5TETcyihsEIZR3qG', '6FKP2O0oOvZlDkF0gyTjiJ', '65YAjLCn7Jp33nJpOxIPMe', '73TNMu44lT0m1h1Nn6Bfiq']
 playlists = ['3jRTRcUqdkiSIAm7A1snfK', '1zxvLY3HTtXMjnpmBe0iK3', '37i9dQZF1EQoqCH7BwIYb7']
 artists = ['15Dh5PvHQj909E0RgAe0aN', '6vWDO969PvNqNYHIOW5v0m', '0s4kXsjYeH0S1xRyVGN4NO', '78rUTD7y6Cy67W1RVzYs7t', '1U1el3k54VvEUzo3ybLPlM', '4Gso3d4CscCijv0lmajZWs', '0EmeFodog0BfCgMzAIvKQp']
 
+top_tracks = []
+top_artists = []
 recommended_songs = []
-album_tracks = []
-album_artists = []
-playlist_tracks = []
-playlist_artists = []
-
 tempo_values = []
 loudness_values = []
 danceability_values = []
 energy_values = []
 instrumentalness_values = []
 valence_values = []
-
-# Eventually return fail instead of {}
 
 def generate_auth(ti):
     token_url = "https://accounts.spotify.com/api/token"
@@ -50,6 +45,7 @@ def generate_auth(ti):
 def get_albums(ti):
     headers = ti.xcom_pull(key="headers")
     ti.xcom_push(key="headers", value=headers)
+
     for album in albums:
         album_endpoint = f'https://api.spotify.com/v1/albums/{album}/tracks'
         r = requests.get(album_endpoint, headers=headers)
@@ -58,19 +54,25 @@ def get_albums(ti):
         
         info = r.json()['items']
         artist = info[0]['artists'][0]['id']
-        if artist not in album_artists:
-            album_artists.append(artist)
+        if artist not in top_artists:
+            top_artists.append(artist)
         for item in info:
             track_uri = item['uri']
             track = track_uri.split(':')[2]
-            if track not in album_tracks:
-                album_tracks.append(track)
+            if track not in top_tracks:
+                top_tracks.append(track)
 
+    ti.xcom_push(key="top_tracks", value=top_tracks)
+    ti.xcom_push(key="top_artists", value=top_artists)
     return "Album artists and tracks retrieved"
 
 def get_playlists(ti):
     headers = ti.xcom_pull(key="headers")
     ti.xcom_push(key="headers", value=headers)
+
+    top_tracks = ti.xcom_pull(key="top_tracks")
+    top_artists = ti.xcom_pull(key="top_artists")
+
     for playlist in playlists:
         limit = 10
         playlist_endpoint = f"https://api.spotify.com/v1/playlists/{playlist}/tracks?limit={limit}"
@@ -82,15 +84,108 @@ def get_playlists(ti):
         for item in info:
             artist_uri = item['track']['artists'][0]['uri']
             artist = artist_uri.split(':')[2]
-            if artist not in playlist_artists:
-                playlist_artists.append(artist)
+            if artist not in top_artists:
+                top_artists.append(artist)
             track_uri = item['track']['uri']
             track = track_uri.split(':')[2]
-            if track not in playlist_tracks:
-                playlist_tracks.append(track)
+            if track not in top_tracks:
+                top_tracks.append(track)
 
+    ti.xcom_push(key="top_tracks", value=top_tracks)
+    ti.xcom_push(key="top_artists", value=top_artists)
     return "Playlist artists and tracks retrieved"
+
+def get_audio_features(ti):
+    headers = ti.xcom_pull(key="headers")
+    ti.xcom_push(key="headers", value=headers)
+
+    top_tracks = ti.xcom_pull(key="top_tracks")
+    top_artists = ti.xcom_pull(key="top_artists")
+
+    # Get audio features of tracks
+    for track in top_tracks:
+        audio_features_endpoint = f"https://api.spotify.com/v1/audio-features/{track}"
+        r = requests.get(audio_features_endpoint, headers=headers)
+        if r.status_code not in range(200, 299):
+            return "{}"
+
+        info = r.json()
+        tempo = info['tempo']
+        loudness = info['loudness']
+        danceability = info['danceability']
+        energy = info['energy']
+        valence = info['valence'] # musical positiveness conveyed by a track
+        instrumentalness = info['instrumentalness']
+        
+        tempo_values.append(tempo)
+        loudness_values.append(loudness)
+        danceability_values.append(danceability)
+        energy_values.append(energy)
+        valence_values.append(valence)
+        instrumentalness_values.append(instrumentalness)
+
+    min_tempo = min(tempo_values)
+    max_tempo = max(tempo_values)
+    tempo = [min_tempo, max_tempo]
+
+    min_loudness = min(loudness_values)
+    max_loudness = max(loudness_values)
+    loudness = [min_loudness, max_loudness]
+
+    min_energy = min(energy_values)
+    max_energy = max(energy_values)
+    energy = [min_energy, max_energy]
+
+    min_instrumentalness = min(instrumentalness_values)
+    max_instrumentalness = max(instrumentalness_values)
+    instrumentalness = [min_instrumentalness, max_instrumentalness]
+
+    min_danceability = round(sum(danceability_values) / len(danceability_values), 2)
+    max_danceability = max(danceability_values)
+    danceability = [min_danceability, max_danceability]
+
+    min_valence = round(sum(valence_values) / len(valence_values), 2)
+    max_valence = max(valence_values)
+    valence = [min_valence, max_valence]
+
+    ti.xcom_push(key="top_tracks", value=top_tracks)
+    ti.xcom_push(key="top_artists", value=top_artists)
     
+    ti.xcom_push(key="tempo", value=tempo)
+    ti.xcom_push(key="loudness", value=loudness)
+    ti.xcom_push(key="danceability", value=danceability)
+    ti.xcom_push(key="energy", value=energy)
+    ti.xcom_push(key="valence", value=valence)
+    ti.xcom_push(key="instrumentalness", value=instrumentalness)
+
+def get_recommendations(ti):
+    headers = ti.xcom_pull(key="headers")
+    ti.xcom_push(key="headers", value=headers)
+
+    top_tracks = ti.xcom_pull(key="top_tracks")
+    top_artists = ti.xcom_pull(key="top_artists")
+    
+    min_tempo, max_tempo = ti.xcom_pull(key="tempo")
+    min_loudness, max_loudness = ti.xcom_pull(key="loudness")
+    min_danceability, max_danceability = ti.xcom_pull(key="danceability")
+    min_energy, max_energy = ti.xcom_pull(key="energy")
+    min_valence, max_valence = ti.xcom_pull(key="valence")
+    min_instrumentalness, max_instrumentalness = ti.xcom_pull(key="instrumentalness")
+
+    limit = 10
+    seed_track = top_tracks[1]
+    seed_artist = top_artists[1]
+    recommendation_endpoint = f"https://api.spotify.com/v1/recommendations?limit={limit}&market=ES&seed_artists={seed_artist}&seed_genres=pop%2Crap%2Cr-n-b&seed_tracks={seed_track}&min_danceability={min_danceability}&max_danceability={max_danceability}&min_energy={min_energy}&max_energy={max_energy}&min_instrumentalness={min_instrumentalness}&max_instrumentalness={max_instrumentalness}&min_loudness={min_loudness}&max_loudness={max_loudness}&min_tempo={min_tempo}&max_tempo={max_tempo}&min_valence={min_valence}&max_valence={max_valence}"
+    r = requests.get(recommendation_endpoint, headers=headers)
+    if r.status_code not in range(200, 299):
+        return "{}"
+    info = r.json()
+    for track in info['tracks']:
+        song = track['name']
+        if song not in recommended_songs:
+            recommended_songs.append(song)
+    
+    return recommended_songs
 
 def slack_notification(context):
     slack_msg = """
@@ -143,6 +238,18 @@ get_playlists = PythonOperator(
     dag=dag,
 )
 
-generate_auth >> get_albums >> get_playlists
+get_audio_features = PythonOperator(
+    task_id="get_audio_features",
+    python_callable=get_audio_features,
+    trigger_rule="all_success",
+    dag=dag,
+)
 
-# ['7tYKF4w9nC0nq9CsPZTHyP', '78rUTD7y6Cy67W1RVzYs7t', '5ZS223C6JyBfXasXxrRqOk', '6vWDO969PvNqNYHIOW5v0m', '5K4W6rqBFWDnAN6FQUkS6x', '1U1el3k54VvEUzo3ybLPlM']
+get_recommendations = PythonOperator(
+    task_id="get_recommendations",
+    python_callable=get_recommendations,
+    trigger_rule="all_success",
+    dag=dag,
+)
+
+generate_auth >> get_albums >> get_playlists >> get_audio_features >> get_recommendations
