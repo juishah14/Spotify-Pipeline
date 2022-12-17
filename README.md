@@ -27,8 +27,8 @@ Requires Docker Desktop.
 Steps:
 Run the following commands on your terminal.
 
-1. `docker-compose build`
-2. `docker-compose up`
+1. `docker compose build`
+2. `docker compose up`
 
 View state of container, `docker ps` (wait till you see healthy) . <br>
 View the UI in a browser, go to `localhost:8080` . <br>
