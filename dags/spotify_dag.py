@@ -160,8 +160,6 @@ def get_audio_features(ti):
 
 def get_recommendations(ti):
     headers = ti.xcom_pull(key="headers")
-    ti.xcom_push(key="headers", value=headers)
-
     top_tracks = ti.xcom_pull(key="top_tracks")
     top_artists = ti.xcom_pull(key="top_artists")
     
