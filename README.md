@@ -10,6 +10,8 @@ Since I don't have a subscription to any cloud computing services, I wasn't able
 
 ![My Image](images/pipeline.png)
 
+A list of some of the songs I was recommended -
+
 ![My Image](images/songs.png)
 
 This pipeline also automatically sends alerts to Slack upon encountering any failures or errors -
