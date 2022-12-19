@@ -1,5 +1,5 @@
 # Spotify ETL Pipeline
-### Tools: Spotify Api, Apache Airflow, Docker
+### Tools: Apache Airflow, Docker, Spotify API
 
 This pipeline was designed using Apache Airflow and Docker to programatically generate song recommendations using the Spotify API. It generates the necessary authorization details needed and then extracts data on my favourite playlists, albums, and tracks on Spotify. This information is then processed to identify key features, such as the artists of these tracks, and the audio features of these tracks, such as its tempo, energy and 'danceability'.
 
